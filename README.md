@@ -108,7 +108,7 @@ python LAB3.py
 - `primary_features_eda_cleaned.csv` - EDA-processed data with visualizations
 - Various intermediate CSV files for analysis tracking
 
-## 📊 Key Insights
+## Key Insights
 
 ### Research Questions Explored
 1. **Price Prediction Models**: Can we accurately predict car prices using vehicle features?
@@ -168,8 +168,8 @@ Core libraries used in this project:
 - **Reproducible Analysis**: Fixed random seeds and clear documentation
 
 ## Assignment Requirements Coverage
-✅ **Data Preprocessing**: Complete cleaning pipeline with detailed explanations  
-✅ **EDA**: Comprehensive exploratory analysis with correlation studies  
-✅ **Feature Insights**: Detailed explanations for all methodological choices  
-✅ **Research Questions**: Clear problem formulation backed by EDA findings  
+ **Data Preprocessing**: Complete cleaning pipeline with detailed explanations  
+ **EDA**: Comprehensive exploratory analysis with correlation studies  
+ **Feature Insights**: Detailed explanations for all methodological choices  
+ **Research Questions**: Clear problem formulation backed by EDA findings  
 
