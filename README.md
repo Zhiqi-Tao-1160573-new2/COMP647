@@ -4,14 +4,14 @@ Machine Learning and Artificial Intelligence Course Project
 ## Project Overview
 This is a machine learning course project that includes data analysis, data preprocessing, and machine learning model training experiments. The project focuses on analyzing automotive data to build price prediction models and explore market patterns in the Georgian car market.
 
-## 🚗 Dataset
+## Dataset
 The project uses the `primary_features.csv` dataset containing comprehensive automotive features and price information, including:
 - Vehicle specifications (mileage, year, engine volume, cylinders)
 - Car features (ABS, air conditioning, navigation, etc.)
 - Market data (price in Georgian Lari, manufacturer, model)
 - User information and listing details
 
-## 📁 Project Structure
+## Project Structure
 ```
 COMP647/
 ├── LAB1 & LAB2.py              # Data preprocessing and cleaning pipeline
@@ -23,7 +23,7 @@ COMP647/
 └── venv/                      # Python virtual environment
 ```
 
-## 🛠️ Features
+##  Features
 
 ### Data Preprocessing (LAB1 & LAB2.py)
 - **Duplicate Detection**: Identifies and removes duplicate records based on key features
@@ -48,7 +48,7 @@ COMP647/
   - Box plots for statistical summaries
 - **Categorical Analysis**: Feature cardinality and unique value counts
 
-## 🔧 Environment Setup
+## Environment Setup
 
 ### Prerequisites
 - Python 3.9+
@@ -89,7 +89,7 @@ venv\Scripts\activate.bat
 pip install -r requirements.txt
 ```
 
-## 🚀 Usage
+## Usage
 
 ### Running the Analysis
 ```bash
@@ -123,7 +123,7 @@ python LAB3.py
 - Car features show varying correlation strengths with price
 - Clear market segmentation patterns across different vehicle categories
 
-## 📈 Visualizations
+## Visualizations
 The project includes 8 comprehensive chart types:
 - **Bar Charts**: Feature correlation analysis and cardinality
 - **Pair Plots**: Numerical feature relationship matrix
@@ -134,14 +134,14 @@ The project includes 8 comprehensive chart types:
 - **Box Plots**: Statistical summary comparisons
 - **Probability Plots**: Normality testing and outlier impact
 
-## 🛠️ Dependencies
+##  Dependencies
 Core libraries used in this project:
 - **Data Processing**: pandas, numpy
 - **Visualization**: matplotlib, seaborn
 - **Statistical Analysis**: scipy
 - **Development**: jupyter, notebook
 
-## 📝 Methodology
+## Methodology
 
 ### Data Preprocessing Approach
 1. **Quality Assessment**: Initial data quality checks and type validation
@@ -160,14 +160,14 @@ Core libraries used in this project:
 4. **Categorical Analysis**: Cardinality and frequency analysis
 5. **Statistical Validation**: Probability plots and normality testing
 
-## 🔍 Technical Highlights
+## Technical Highlights
 - **Robust Preprocessing**: Handles real-world data quality issues
 - **Comprehensive EDA**: 8 different visualization types for thorough analysis
 - **Statistical Rigor**: Multiple outlier detection methods with justification
 - **Feature Engineering**: Domain knowledge integration for better modeling
 - **Reproducible Analysis**: Fixed random seeds and clear documentation
 
-## 📋 Assignment Requirements Coverage
+## Assignment Requirements Coverage
 ✅ **Data Preprocessing**: Complete cleaning pipeline with detailed explanations  
 ✅ **EDA**: Comprehensive exploratory analysis with correlation studies  
 ✅ **Feature Insights**: Detailed explanations for all methodological choices  
