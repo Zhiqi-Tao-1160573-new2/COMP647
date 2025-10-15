@@ -1,6 +1,8 @@
 # ML and AI_comp647
 Machine Learning and Artificial Intelligence Course Project
 
+# The dataset file is too large so I uploaded a compressed package. Please unzip it and use it.
+
 ## Project Overview
 This is a machine learning course project that includes data analysis, data preprocessing, and machine learning model training experiments. The project focuses on analyzing automotive data to build price prediction models and explore market patterns in the Georgian car market.
 
