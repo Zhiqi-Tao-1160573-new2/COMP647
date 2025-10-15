@@ -1,13 +1,8 @@
 # =============================================================================
-# LAB1 & LAB2.py - Data Preprocessing and Cleaning
-# Function: Handle duplicate data, irrelevant data, missing values, and outlier detection
-# 
-# ASSIGNMENT REQUIREMENTS COVERAGE:
-# 1. Data Preprocessing: Complete data cleaning pipeline including duplicate removal,
-#    missing value imputation using median/mode methods, and outlier detection
-# 2. EDA Preparation: Cleaned data ready for exploratory analysis and correlation studies
-# 3. Feature Insights: Detailed explanations for each preprocessing decision and method choice
-# 4. Research Questions: Data prepared for investigating car price prediction models
+# Assessment 02 - Data Preprocessing and EDA Analysis
+# Function: Complete data cleaning pipeline and exploratory data analysis
+# Coverage: Duplicate removal, missing value imputation, outlier detection, and visualization
+# Purpose: Prepare automotive data for price prediction modeling
 # =============================================================================
 
 import pandas as pd
@@ -25,9 +20,9 @@ pd.set_option('display.max_rows',None)
 # =============================================================================
 # 1. Data Loading
 # =============================================================================
-# Load data from CSV file
-# Choose this file because it contains complete automotive feature data with boolean values converted to 1 and 0
-# This allows direct subsequent data analysis and modeling work
+# Load automotive dataset with boolean features converted to 0/1 values
+# Display basic data information including shape, types, and statistics
+# Check for data quality issues like infinite values and negative prices
 df = pd.read_csv('./primary_features_boolean_converted_final.csv')
 print(df.head())  # Display first 5 rows of data
 print(df.shape)   # Display data shape (rows, columns)
@@ -37,7 +32,7 @@ print(df.describe().transpose())  # Display statistical description of numerical
 # =============================================================================
 # 2. Initial Data Quality Check
 # =============================================================================
-# Check basic data quality metrics
+# Check basic data quality metrics including data types, memory usage, and negative values
 print("\n" + "="*50)
 print("Initial Data Quality Check")
 print("="*50)
@@ -70,14 +65,9 @@ print(f"  Negative year: {negative_year}")
 # Clean spaces in column names
 df.columns = df.columns.str.strip()
 
-# Check duplicate data based on specific column combinations
-# Reasons for choosing these columns as duplicate detection criteria:
-# - user_id: User identity identifier, same user may post multiple vehicles
-# - model: Vehicle model, different users may own same model
-# - mileage: Mileage, same model but different mileage should be considered different vehicles
-# - product_year: Production year, same model but different year should be considered different vehicles
-# - price: Price, same model but different price should be considered different vehicles
-# This combination can accurately identify true duplicate records and avoid false deletions
+# Clean column names and identify duplicate records based on key features
+# Remove duplicates keeping first occurrence to maintain data integrity
+# Duplicates identified using user_id, model, mileage, product_year, and price combination
 duplicate_count = df.duplicated(subset=['user_id', 'model','mileage','product_year','price(Georgian Lari)']).sum()
 print(f"\nDuplicate data check:")
 print(f"Duplicates sum: {duplicate_count}")
@@ -89,11 +79,9 @@ print(f"Data shape after removing duplicates: {df.shape}")
 # =============================================================================
 # 4. Handle Irrelevant Data
 # =============================================================================
-# Find constant features (columns with only one unique value)
-# Constant features have no value for machine learning models because:
-# - They provide no distinguishing information
-# - They increase model complexity without improving performance
-# - They may cause overfitting
+# Remove constant features (single unique value) as they provide no information
+# Remove user_status column which doesn't affect vehicle pricing
+# These features add noise without contributing to price prediction models
 constant_features = [col for col in df.columns if df[col].nunique()==1]
 print(f"\nConstant feature check:")
 print("Constant features: ",constant_features)
@@ -109,12 +97,9 @@ if 'user_status' in df.columns:
 # =============================================================================
 # 5. Handle High Missing Value Columns
 # =============================================================================
-# Set missing value threshold (50%), columns exceeding this threshold will be deleted
-# Reasons for choosing 50% as threshold:
-# - Missing values below 50% can be handled by interpolation and other methods
-# - Missing values above 50% mean the column has severely insufficient information
-# - For price prediction tasks, I need sufficiently complete data to train models
-# - 50% is an empirical value that balances data completeness and model performance
+# Remove columns with missing value ratio exceeding 50% threshold
+# High missing ratios indicate insufficient data for reliable analysis
+# 50% threshold balances data completeness with model performance needs
 threshold = 50
 print(f"\nMissing value handling:")
 print(f"Total records {df.shape[0]}")
@@ -139,10 +124,11 @@ if high_missing_columns:
 # =============================================================================
 # 6. Data Type Validation and Correction
 # =============================================================================
+# Convert object columns to numeric where possible using pandas.to_numeric
+# Identify numerical and categorical columns for appropriate processing
+# Check categorical column cardinality to identify encoding needs
 print(f"\nData type validation and correction:")
 print("="*50)
-
-# Check and correct data types of numerical columns
 numerical_columns = df.select_dtypes(include=[np.number]).columns
 print(f"Numerical columns: {list(numerical_columns)}")
 
@@ -169,9 +155,11 @@ for col in categorical_columns:
         print(f"    Warning: {col} has too many unique values, may need re-encoding")
 
 # =============================================================================
-# 7. Handle Missing Values
+# 7. Remove Unreasonable Data
 # =============================================================================
-# Find rows containing missing values
+# Remove records with invalid values that indicate data entry errors
+# Price 0, negative mileage, and unreasonable years are clearly data quality issues
+# These outliers would distort correlation analysis and model training
 df_missing_data = df[df.isnull().any(axis=1)]
 print(f"\nMissing value handling:")
 print(f"Rows with missing values: {df_missing_data.shape[0]}")
@@ -186,9 +174,7 @@ missing_categorical_columns = df[categorical_columns].isnull().any()
 missing_categorical_columns = missing_categorical_columns[missing_categorical_columns].index
 print(f"Categorical columns with missing values: {missing_categorical_columns.tolist()}")
 
-# Remove rows with price 0 (price cannot be 0)
-# Price 0 is usually data entry error or placeholder, not real vehicle price
-# Keeping this data will cause the model to learn wrong patterns
+# Remove zero prices
 price_zero_rows = df[df['price(Georgian Lari)'] == 0]
 print(f"\nRows with price 0: {price_zero_rows.shape[0]}")
 if len(price_zero_rows) > 0:
@@ -217,12 +203,9 @@ if len(unreasonable_engine_rows) > 0:
 # =============================================================================
 # 8. Fill Missing Values in Automotive Feature Columns
 # =============================================================================
-# Define automotive feature column list
-# These features have important impact on vehicle price:
-# - ABS, ESP and other safety configurations directly affect vehicle value
-# - Air conditioning, navigation and other comfort configurations affect user experience and price
-# - Sunroof, leather seats and other luxury configurations significantly increase price
-# Therefore, these missing values must be filled rather than simply deleted
+# Fill missing car feature values using similarity-based interpolation
+# Use mode values from same manufacturer and model for logical consistency
+# Car features like ABS, AC, navigation significantly impact vehicle pricing
 car_feature_columns = [
     "ABS", "Accessible for PWD", "Air Conditioning", "Alarm System", "Central Locking", 
     "Central Screen (Navigation)", "Climate Control", "Electric Side Mirros", "ESP", "Heated Seats", 
@@ -233,11 +216,8 @@ car_feature_columns = [
 print(f"\nFilling missing values in automotive feature columns:")
 print("="*50)
 
-# Iterate through all rows to find empty columns and fill them
-# Use similarity-based interpolation strategy:
-# - Vehicles of same manufacturer and model usually have similar configurations
-# - This method is more reasonable than simply using global mode
-# - Maintains logical consistency of data
+# Process each car feature column to fill missing values using same manufacturer/model mode
+# Limit processing to 50 rows per column for efficiency
 for col in car_feature_columns:
     if col not in df.columns:
         continue
@@ -283,12 +263,9 @@ for col in car_feature_columns:
 print(f"\nFilling missing values in numerical columns:")
 print("="*50)
 
-# Use median to fill missing values in numerical columns
-# Median imputation is chosen over mean because:
-# - Median is robust to outliers, which are common in price and mileage data
-# - Median preserves the central tendency without being skewed by extreme values
-# - For automotive data, median represents typical values better than mean
-# - Median is less sensitive to data distribution shape (skewed vs normal)
+# Use median imputation for numerical columns to handle outliers robustly
+# Median preserves central tendency without being skewed by extreme values
+# More appropriate than mean for automotive data with potential outliers
 for col in missing_numerical_columns:
     if col in df.columns:
         missing_count = df[col].isnull().sum()
@@ -303,12 +280,9 @@ for col in missing_numerical_columns:
 print(f"\nFilling missing values in categorical columns:")
 print("="*50)
 
-# Use mode to fill missing values in categorical columns
-# Mode imputation is chosen for categorical data because:
-# - Mode represents the most frequent category, maintaining data distribution
-# - For categorical features like fuel_type, gear, color, mode reflects market preferences
-# - Mode preserves the original data structure better than arbitrary category assignment
-# - Mode is the most appropriate central tendency measure for nominal categorical data
+# Use mode imputation for categorical columns to maintain data distribution
+# Mode represents most frequent category, reflecting market preferences
+# Preserves original data structure better than arbitrary category assignment
 for col in missing_categorical_columns:
     if col in df.columns:
         missing_count = df[col].isnull().sum()
@@ -320,10 +294,11 @@ for col in missing_categorical_columns:
 # =============================================================================
 # 11. Feature Engineering
 # =============================================================================
+# Create derived features that capture important automotive market patterns
+# Vehicle age, price per km, and brand-model combinations improve model performance
+# These features reveal depreciation patterns and value propositions across segments
 print(f"\nFeature engineering:")
 print("="*50)
-
-# Create vehicle age feature
 if 'product_year' in df.columns:
     current_year = 2024  # Assume current year
     df['vehicle_age'] = current_year - df['product_year']
@@ -367,12 +342,9 @@ if 'mileage' in df.columns:
 # =============================================================================
 # 12. Outlier Detection and Handling - IQR Method
 # =============================================================================
-# Interquartile Range method: Remove points outside Q1 - 1.5*IQR or Q3 + 1.5*IQR
-# Reasons for choosing IQR method:
-# - Insensitive to outliers, more robust than Z-score method
-# - Based on actual data distribution, doesn't assume normal distribution
-# - 1.5 times IQR is standard threshold in statistics
-# - Suitable for handling right-skewed data like price
+# Use IQR method to detect and remove price outliers for robust analysis
+# IQR method is insensitive to outliers and doesn't assume normal distribution
+# 1.5 times IQR is standard threshold for identifying extreme values
 def find_outliers_IQR_method(input_df,variable):
     """
     Use IQR method to detect outliers
@@ -388,12 +360,8 @@ def find_outliers_IQR_method(input_df,variable):
 
     return lower_limit,upper_limit
 
-# Find lower and upper bounds for target feature (price)
-# Price is the target variable I want to predict, outliers will seriously affect model performance
-# Price outliers usually indicate:
-# - Data entry errors (such as extra or missing zeros)
-# - Special vehicles (such as antique cars, limited editions)
-# - Data quality issues
+# Find price outlier bounds and remove extreme values that affect model performance
+# Price outliers usually indicate data entry errors or special vehicles
 feature = 'price(Georgian Lari)'
 lower,upper = find_outliers_IQR_method(df,feature)
 print(f'\nPrice outlier detection (IQR method):')
@@ -407,17 +375,9 @@ print(f'Outlier count: {len(df)-len(df_cleaned)}')
 # =============================================================================
 # 13. Probability Plot Visualization - Before and After Outlier Handling Comparison
 # =============================================================================
-# Probability plot (probplot) is typically used for normality testing, also a helpful visual tool for identifying outliers
-# and assessing distribution fit
-# Reasons for choosing probability plot:
-# - Can intuitively display data distribution normality
-# - Outliers will obviously deviate from the line in the plot
-# - Easy to compare effects before and after processing
-# - Help understand changes in data distribution
-# Points far from line: Possible outliers
-# Points far only at ends: Outliers in tails
-# Sudden jumps in spacing: Data irregularities or outliers
-# S-shaped curve: Non-normality + possible outliers
+# Create probability plots to visualize data distribution before and after outlier removal
+# Shows improvement in data normality after cleaning extreme values
+# Helps assess effectiveness of outlier detection methods
 
 sns.set_style('whitegrid')
 plt.figure(figsize=(16,6))
@@ -455,20 +415,13 @@ def find_outliers_ZScore_method(input_df,variable):
     df_z_scores[variable+'_Z']=z_scores
     return df_z_scores
 
-# Calculate Z-scores for specified feature
-# Z-score method as supplement to IQR method, provides another perspective for outlier detection
-# Characteristics of Z-score method:
-# - Based on normal distribution assumption
-# - More sensitive to extreme values
-# - Suitable for handling data close to normal distribution
+# Z-score method as supplement to IQR method for comprehensive outlier detection
+# Based on normal distribution assumption with |Z| > 3 threshold
+# Provides alternative perspective on extreme value identification
 df_z_scores = find_outliers_ZScore_method(df.copy(),feature)
 df_z_scores.head()
 
-# Remove outliers relative to the feature. Remove data points where |Z| > 3
-# Reasons for choosing 3 as threshold:
-# - In normal distribution, probability of |Z| > 3 is about 0.27%
-# - This is a commonly used significance level in statistics
-# - Balances sensitivity and specificity of outlier detection
+# Remove data points where |Z| > 3 for balanced sensitivity and specificity
 df_z_score_cleand = df_z_scores[df_z_scores[feature+'_Z']<3]
 print(f'\nZ-score method outlier detection:')
 print(f'Cleaned dataset shape: {df_z_score_cleand.shape}')
@@ -512,46 +465,14 @@ print(f"\nCleaned data saved to: {output_file}")
 
 print("\nData preprocessing completed!")
 
-# =============================================================================
-# RESEARCH QUESTIONS AND INSIGHTS FROM PREPROCESSING
-# =============================================================================
-# Based on the data preprocessing analysis, several key research questions emerge:
-# 
-# 1. PRICE PREDICTION MODEL: Can I build accurate models to predict car prices
-#    based on features like mileage, year, engine volume, and car configurations?
-#    - Target variable: price(Georgian Lari) - shows strong correlation with vehicle age
-#    - Key predictors: mileage, product_year, engine_volume, car features (ABS, AC, etc.)
-# 
-# 2. FEATURE IMPORTANCE ANALYSIS: Which car features have the strongest impact on price?
-#    - Luxury features (sunroof, leather seats) likely show positive correlation
-#    - Safety features (ABS, ESP) may have moderate positive impact
-#    - Basic features (air conditioning) might show varying effects by market segment
-# 
-# 3. MARKET SEGMENTATION: How do different car brands and models cluster in price ranges?
-#    - Brand_model feature enables analysis of brand premium effects
-#    - Vehicle age and mileage interaction reveals depreciation patterns
-#    - Price_per_km ratio identifies value propositions across segments
-# 
-# 4. OUTLIER ANALYSIS: What do price outliers tell us about the Georgian car market?
-#    - High-end luxury vehicles vs. data entry errors
-#    - Antique/collector cars vs. modern vehicles
-#    - Market anomalies that could indicate economic factors
-# 
-# The preprocessing reveals this dataset is well-suited for regression analysis,
-# with clear target variable and multiple predictor features ready for modeling.
-# =============================================================================
+# Research questions: Price prediction models, feature importance analysis, market segmentation, and outlier analysis
+# Dataset is well-suited for regression analysis with clear target variable and predictor features
 
 # =============================================================================
-# LAB3.py - Exploratory Data Analysis (EDA) and Visualization
-# Function: Data exploration, correlation analysis, outlier handling, multiple chart visualizations
-# 
-# ASSIGNMENT REQUIREMENTS COVERAGE:
-# 1. EDA: Comprehensive exploratory analysis investigating correlations and relationships
-#    among features using multiple visualization techniques and statistical methods
-# 2. Correlation Analysis: Bar charts and pair plots reveal feature interactions and dependencies
-# 3. Feature Insights: Detailed explanations for each chart choice and analytical approach
-# 4. Research Questions: EDA findings support car price prediction and market analysis
+# EDA and Visualization Analysis
 # =============================================================================
+# Comprehensive exploratory analysis with multiple visualization techniques
+# Correlation analysis and feature interactions using statistical methods
 
 from pandas.api.types import CategoricalDtype
 
@@ -644,20 +565,12 @@ print("="*50)
 # - Conforms to automotive market price expression habits
 df['price(Georgian Lari)']= (df['price(Georgian Lari)']/1000).astype(int)
 
-# Randomly sample 20% of the dataset for exploratory analysis
-# Reasons for choosing 20% sample:
-# - Reduce computation time, improve analysis efficiency
-# - 20% sample is usually sufficient to reflect overall data characteristics
-# - Use fixed random seed to ensure reproducible results
-# - In cases of large data volume, sampling analysis is more practical
+# Sample 20% of data for efficient exploratory analysis while maintaining representativeness
+# Fixed random seed ensures reproducible results across runs
 df = df.sample(frac=0.20,random_state=42)
 print(df.describe().transpose())
 
-# Identify numerical and categorical columns
-# Distinguishing data types is important for subsequent analysis:
-# - Numerical columns can perform correlation analysis and statistical tests
-# - Categorical columns are suitable for frequency analysis and visualization
-# - Different types of data require different analysis methods
+# Identify numerical and categorical columns for appropriate analysis methods
 numerical_columns = df.select_dtypes(include=[np.number]).columns
 categorical_columns = df.select_dtypes(include=['object','category']).columns
 print("Numerical columns:", numerical_columns)
@@ -770,22 +683,12 @@ print("="*50)
 # =============================================================================
 # CHART 1: Bar Chart for Price Correlation
 # =============================================================================
-# Why choose Bar Chart for correlation analysis:
-# - Bar charts are ideal for comparing categorical data (feature names) with numerical values (correlation coefficients)
-# - The height of each bar directly represents the correlation strength, making it easy to rank features by importance
-# - Bar charts provide clear visual hierarchy - longer bars indicate stronger correlations
-# - They are excellent for showing the relative magnitude of correlations between multiple features
-# - Bar charts are universally understood and accessible to both technical and non-technical audiences
-# - They work well with sorted data, allowing me to easily identify the most and least correlated features
-# - The horizontal orientation with rotated labels prevents text overlap even with many features
+# Bar charts ideal for comparing feature correlations with price
+# Height represents correlation strength for easy feature ranking
+# Clear visual hierarchy shows relative magnitude of correlations
 plt.figure(figsize=(20,8))
-# Calculate correlation between numerical columns and price, excluding price itself and some irrelevant columns
-# Pearson correlation coefficient is used to measure linear relationships between features and price
-# Reasons for excluding these columns:
-# - app_id, user_id: Identifiers, no logical relationship with price
-# - pred_breakpoints: Prediction-related columns, may cause data leakage
-# Correlation analysis helps identify which features have strongest linear relationship with target variable
-# This guides feature selection for machine learning models and reveals data patterns
+# Calculate Pearson correlation coefficients between features and price
+# Exclude identifiers and prediction columns to avoid data leakage
 correlation_data = df[numerical_columns].corr()['price(Georgian Lari)'].drop('price(Georgian Lari)').drop('app_id').drop('user_id').drop('pred_first_breakpoint').drop('pred_second_breakpoint').sort_values(ascending=False)
 correlation_data.plot(kind='bar')
 plt.title('Correlation with Price - Bar Chart Analysis')
@@ -798,15 +701,9 @@ plt.tight_layout()
 # =============================================================================
 # CHART 2: Pair Plot for Numerical Feature Relationships
 # =============================================================================
-# Why choose Pair Plot for feature relationship analysis:
-# - Pair plots create a matrix of scatter plots showing relationships between all pairs of numerical variables
-# - They provide a comprehensive overview of how each feature relates to every other feature in a single visualization
-# - The diagonal shows the distribution of each individual variable, helping identify data patterns and skewness
-# - Pair plots are excellent for detecting non-linear relationships, clusters, and outliers that might be missed in correlation analysis
-# - They allow me to see the "big picture" of feature interactions, which is crucial for understanding the data structure
-# - The matrix format makes it easy to compare relationships across different feature combinations
-# - They help me identify potential multicollinearity issues between features
-# - Pair plots are particularly useful for medium-sized datasets where individual scatter plots would be too numerous
+# Matrix of scatter plots showing relationships between all numerical variables
+# Provides comprehensive overview of feature interactions in single visualization
+# Diagonal shows individual variable distributions and potential multicollinearity
 print("\nCreating Pair Plot to analyze relationships between numerical features...")
 pair_plot=sns.pairplot(df[['price(Georgian Lari)','mileage','cylinders','product_year','engine_volume']])
 pair_plot.fig.suptitle('Pair Plot: Numerical Feature Relationships Analysis',y=1.02)
@@ -897,27 +794,16 @@ print("="*50)
 # - The continuous line helps visualize the smooth transition between data points
 # - Adding markers (marker='o') makes it easy to read exact values at specific mileage points
 # - Line charts are ideal for showing aggregated data (average prices) across binned categories
-# Group mileage by every 10000km
-# Reasons for choosing 10000km as grouping interval:
-# - Too large interval may mask important trends
-# - Too small interval may produce noise
-# - 10000km is common mileage node for automotive maintenance
-# - Facilitates understanding of price changes in different mileage ranges
+# Group mileage by 10000km intervals for trend analysis
+# Balance between detail and noise reduction for clear pattern identification
 bins = range(0, int(df_cleaned['mileage'].max()) + 10000, 10000)
 df_cleaned['mileage_bin'] = pd.cut(df_cleaned['mileage'], bins=bins)
 
-# Calculate average price by mileage group
-# Reasons for using average price instead of median price:
-# - Average price reflects overall price level
-# - Easy to identify price trends
-# - Average price is more sensitive to outliers, helpful for discovering patterns
+# Calculate average price by mileage group for trend identification
 mileage_avg_price = df_cleaned.groupby('mileage_bin')['price(Georgian Lari)'].mean().reset_index()
 mileage_avg_price['mileage_bin_str']=mileage_avg_price['mileage_bin'].astype(str)
 
-# Order mileage
-# Use categorical data type to ensure correct mileage order:
-# - Avoid wrong order caused by string sorting
-# - Ensure logical arrangement of mileage ranges in charts
+# Use categorical data type to ensure correct mileage order in visualization
 cat_type=CategoricalDtype(categories=mileage_avg_price['mileage_bin_str'],ordered=True)
 mileage_avg_price['mileage_bin_str']=mileage_avg_price['mileage_bin_str'].astype(cat_type)
 
@@ -943,17 +829,9 @@ print("="*50)
 # =============================================================================
 # CHART 4: KDE Plot for Mileage vs Price Joint Distribution
 # =============================================================================
-# Why choose KDE Plot for mileage vs price analysis:
-# - KDE plots create smooth, continuous representations of data density, unlike discrete scatter plots
-# - They are excellent for large datasets where individual points would create visual clutter
-# - KDE plots reveal the underlying probability density of the data, showing where most observations are concentrated
-# - The color intensity (using cmap='Blues') provides an intuitive way to understand data density
-# - They can identify multiple modes or clusters in the data that might indicate different vehicle segments
-# - KDE plots are particularly useful for understanding the joint distribution of two continuous variables
-# - They help identify areas of high and low data concentration, revealing data patterns
-# - The smooth contours make it easier to spot trends and relationships than raw scatter plots
-# - KDE plots are excellent for detecting non-linear relationships and data clustering
-# - They provide a more sophisticated view of data structure than basic scatter plots
+# KDE plots create smooth density representations for large datasets
+# Color intensity shows data concentration and reveals clustering patterns
+# Excellent for identifying vehicle segments and non-linear relationships
 print("\nCreating KDE Plot to analyze joint distribution of mileage and price...")
 sns.set_theme(style='whitegrid')
 plt.figure(figsize=(20,8))
@@ -976,17 +854,9 @@ print("="*50)
 # =============================================================================
 # CHART 5: Histogram with KDE for Mileage Distribution
 # =============================================================================
-# Why choose Histogram with KDE for mileage distribution analysis:
-# - Histograms provide discrete bins that show the frequency distribution of mileage values
-# - They reveal the shape of the data distribution, including skewness, modality, and range
-# - Adding KDE curve (kde=True) provides a smooth, continuous estimate of the underlying probability density
-# - Histograms are excellent for identifying data patterns such as clustering around certain mileage values
-# - They help understand the distribution of mileage across the dataset, revealing common mileage ranges
-# - The combination of histogram bars and KDE curve gives both discrete and continuous perspectives
-# - Histograms are particularly useful for understanding the spread and central tendency of numerical data
-# - They can reveal potential data quality issues such as unusual spikes or gaps in the distribution
-# - The binning process (bins=100) helps reduce noise while maintaining sufficient detail
-# - Histograms are fundamental tools for understanding the basic structure of numerical variables
+# Histograms show frequency distribution and data shape including skewness
+# KDE overlay provides smooth probability density estimate
+# Reveals data patterns and potential quality issues
 print("\nCreating Histogram with KDE to analyze mileage distribution...")
 sns.set_theme(style='whitegrid')
 plt.figure(figsize=(20,8))
@@ -1007,17 +877,9 @@ print("="*50)
 # =============================================================================
 # CHART 6: Violin Plot for Production Year vs Price
 # =============================================================================
-# Why choose Violin Plot for production year vs price analysis:
-# - Violin plots combine the benefits of box plots with density estimation, showing the full distribution shape
-# - They reveal the probability density of price at each year, showing where most vehicles are priced
-# - Violin plots can display multiple modes or unusual distributions that box plots might miss
-# - They provide more information than box plots while maintaining visual clarity
-# - The width of each violin represents the relative frequency of observations at that year
-# - Violin plots are excellent for comparing distributions across categorical variables (years)
-# - They can reveal non-normal distributions, skewness, and bimodality in the price data
-# - The inner='quartile' parameter shows the median and quartiles, providing statistical summaries
-# - Violin plots are particularly useful for understanding how price distributions change over time
-# - They help identify years with unusual price patterns or market conditions
+# Violin plots combine box plot statistics with density estimation
+# Show full distribution shape and probability density at each year
+# Reveal non-normal distributions and unusual price patterns over time
 print("\nCreating Violin Plot to analyze price distribution across production years...")
 sns.set_theme(style='whitegrid')
 plt.figure(figsize=(20,8))
@@ -1039,17 +901,9 @@ print("="*50)
 # =============================================================================
 # CHART 7: Box Plot for Production Year vs Price
 # =============================================================================
-# Why choose Box Plot for production year vs price analysis:
-# - Box plots provide clear statistical summaries including median, quartiles, and outliers
-# - They are excellent for comparing central tendencies and variability across different years
-# - Box plots clearly show the spread and skewness of price data at each production year
-# - They can identify outliers that might represent special vehicles or data quality issues
-# - Box plots are more focused on statistical measures than violin plots, making them easier to interpret
-# - They work well with violin plots as complementary visualizations - box plots for statistics, violin plots for shape
-# - Box plots are particularly useful for identifying years with unusual price ranges or variability
-# - They can reveal trends in price medians and interquartile ranges over time
-# - Box plots are excellent for detecting changes in market conditions or vehicle pricing strategies
-# - They provide a clean, professional appearance suitable for business presentations and reports
+# Box plots provide clear statistical summaries including median, quartiles, and outliers
+# Excellent for comparing central tendencies and variability across years
+# Complement violin plots with focused statistical measures
 print("\nCreating Box Plot to analyze price statistics across production years...")
 sns.set_theme(style='whitegrid')
 plt.figure(figsize=(20,8))
@@ -1071,26 +925,11 @@ print("="*50)
 # =============================================================================
 # CHART 8: Bar Chart for Categorical Feature Cardinality
 # =============================================================================
-# Why choose Bar Chart for categorical feature cardinality analysis:
-# - Bar charts are ideal for comparing counts across different categories (feature names)
-# - They provide a clear visual representation of how many unique values each categorical feature has
-# - Bar charts make it easy to rank features by their cardinality, identifying high and low cardinality features
-# - They help identify potential issues such as features with too many unique values (high cardinality)
-# - Bar charts are excellent for showing the relative differences between categorical features
-# - They can reveal which features might need encoding strategies (e.g., high cardinality features)
-# - The horizontal orientation with rotated labels prevents text overlap even with long feature names
-# - Bar charts are universally understood and accessible to all audiences
-# - They work well with sorted data, making it easy for me to identify the most and least complex features
-# - Bar charts are perfect for displaying discrete count data like unique value counts
+# Bar charts ideal for comparing unique value counts across categorical features
+# Help identify high cardinality features that may need encoding strategies
+# Clear visual ranking of feature complexity for preprocessing decisions
 print("\nCreating Bar Chart to analyze unique value counts in categorical features...")
-# Get unique value counts in categorical columns
-# Reasons for choosing these categorical columns:
-# - fuel_type: Fuel type affects usage cost and environmental friendliness
-# - gear: Transmission type affects driving experience and price
-# - door_type: Number of doors affects practicality and price
-# - color: Color affects vehicle appearance and market demand
-# - manufacture: Manufacturer affects brand value and reliability
-# These features are all important factors affecting vehicle price
+# Analyze cardinality of key categorical features affecting vehicle pricing
 unique_counts=df_cleaned[['fuel_type','gear','door_type','color','manufacture']].nunique().sort_values()
 plt.figure(figsize=(20,8))
 bars = sns.barplot(x=unique_counts.index,y=unique_counts.values,palette='Set2')
@@ -1138,40 +977,6 @@ print("- Violin Plot: Price distribution by year (distribution shape comparison)
 print("- Box Plot: Price statistics by year (statistical summary comparison)")
 print("- Bar Chart: Categorical feature cardinality (feature complexity analysis)")
 
-# =============================================================================
-# EDA INSIGHTS AND RESEARCH QUESTIONS VALIDATION
-# =============================================================================
-# Based on the comprehensive EDA analysis, several key insights emerge that validate
-# my research questions and guide future modeling decisions:
-# 
-# 1. PRICE PREDICTION VALIDATION:
-#    - Strong negative correlation between vehicle age and price (expected depreciation)
-#    - Moderate negative correlation between mileage and price (wear and tear effect)
-#    - Positive correlation with engine volume (larger engines command higher prices)
-#    - These relationships confirm the dataset is suitable for price prediction models
-# 
-# 2. FEATURE IMPORTANCE CONFIRMATION:
-#    - Car features show varying correlation strengths with price
-#    - Luxury features (sunroof, leather seats) likely have positive impact
-#    - Safety features (ABS, ESP) show moderate positive correlation
-#    - Feature engineering (vehicle_age, price_per_km) reveals additional patterns
-# 
-# 3. MARKET SEGMENTATION INSIGHTS:
-#    - Violin plots reveal price distribution differences across production years
-#    - Box plots show statistical variations in price ranges by year
-#    - KDE plots identify clusters of vehicles in different price-mileage segments
-#    - Line charts demonstrate clear depreciation trends with mileage
-# 
-# 4. DATA QUALITY AND OUTLIER IMPACT:
-#    - IQR method effectively identifies and removes extreme price outliers
-#    - Outlier removal improves data distribution normality (visible in probability plots)
-#    - Cleaned data shows more consistent patterns for modeling
-# 
-# 5. CATEGORICAL FEATURE ANALYSIS:
-#    - Bar charts reveal cardinality differences across categorical features
-#    - High cardinality features (manufacture, model) may need encoding strategies
-#    - Low cardinality features (fuel_type, gear) are ready for direct encoding
-# 
-# The EDA confirms this dataset is well-structured for machine learning applications,
-# with clear target variable relationships and actionable insights for model development.
-# =============================================================================
+# EDA confirms dataset suitability for machine learning with clear target relationships
+# Strong correlations between vehicle age, mileage, and price support prediction models
+# Feature engineering and outlier removal improve data quality for modeling
